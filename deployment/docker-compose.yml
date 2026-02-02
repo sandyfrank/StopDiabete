@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  database:
+    image: postgres:16-alpine
+    container_name: stopdiabete-db
+    environment:
+      POSTGRES_DB: stopdiabete
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../database/schema:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stopdiabete-network
+
+  # Backend API
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: stopdiabete-backend
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: stopdiabete
+      DB_USER: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-changeme}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGIN: ${FRONTEND_URL}
+    ports:
+      - "5000:5000"
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - stopdiabete-network
+    restart: unless-stopped
+
+  # Frontend (Production build)
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: stopdiabete-frontend
+    environment:
+      VITE_API_URL: ${API_URL:-http://localhost:5000}
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - stopdiabete-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  stopdiabete-network:
+    driver: bridge
