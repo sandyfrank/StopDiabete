@@ -4,13 +4,15 @@
   "description": "StopDiabète - Application de gestion du diabète",
   "private": true,
   "scripts": {
+    "postinstall": "cd frontend && npm install",
     "install:frontend": "cd frontend && npm install",
     "install:backend": "cd backend && npm install",
     "install:all": "npm run install:frontend && npm run install:backend",
     "build:frontend": "cd frontend && npm run build",
     "build:backend": "cd backend && npm run build",
     "build:all": "npm run build:frontend && npm run build:backend",
-    "build": "npm run build:frontend",
+    "build": "cd frontend && npm ci && npm run build",
+    "start": "cd frontend && npm run preview",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
@@ -36,7 +38,8 @@
   "author": "Sandy Frank",
   "license": "MIT",
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "vite": "^5.4.0"
   },
   "engines": {
     "node": ">=18.0.0",

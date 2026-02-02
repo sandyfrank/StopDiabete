@@ -1,0 +1,36 @@
+# Backend files (not needed for frontend deployment)
+backend/
+
+# Development files
+*.log
+logs/
+.env
+.env.local
+
+# Test files
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Git
+.git/
+.github/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Scripts
+*.sh
+Makefile

@@ -1,0 +1,22 @@
+# Hostinger Build Settings
+# This file helps Hostinger understand how to build and deploy the project
+
+[build]
+  # Install command
+  command = "npm install && cd frontend && npm install"
+  
+  # Build command
+  publish = "frontend/dist"
+  
+  # Output directory
+  base = "."
+
+[build.environment]
+  # Node version
+  NODE_VERSION = "18"
+
+[[redirects]]
+  # Redirect all routes to index.html for React Router
+  from = "/*"
+  to = "/index.html"
+  status = 200
