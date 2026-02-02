@@ -93,9 +93,9 @@ StopDiabete est une application web gratuite et accessible, conçue pour aider l
 
 - GitHub Actions pour CI/CD
 
-## 🚀 Installation Rapide
+## � Installation & Lancement
 
-## 📦 Installation & Lancement
+### Développement Local
 
 ```bash
 
@@ -164,20 +164,35 @@ npm install
 **Testée sur** : iPhone, Android, iPad, tablettes Android- **FRONTEND_COMPLETED.md** - Documentation frontend détaillée
 
 - **DATABASE_SETUP.md** - Configuration base de données
-
-## 🌐 Déploiement Hostinger- **PROJECT_ROADMAP.md** - Planning de développement
-
+- **PROJECT_ROADMAP.md** - Planning de développement
 - **docs/ARCHITECTURE.md** - Architecture technique
-
-Guide complet dans [DEPLOYMENT.md](./DEPLOYMENT.md) :- **docs/FEATURES.md** - Liste des fonctionnalités
-
+- **docs/FEATURES.md** - Liste des fonctionnalités
 - **docs/USER_PERSONAS.md** - Profils utilisateurs
 
-1. Build production
+## 🌐 Déploiement
 
-2. Configuration PostgreSQL## ✅ État Actuel (2 février 2026)
+### 🚀 Hostinger GitHub Deploy (Recommandé)
 
-3. Upload via SFTP/SSH
+**L'application se déploie automatiquement via GitHub !**
+
+```bash
+git push origin main
+# Hostinger détecte et déploie automatiquement ! ✨
+```
+
+**📖 Guide complet** : [HOSTINGER_GITHUB_DEPLOYMENT.md](./HOSTINGER_GITHUB_DEPLOYMENT.md)
+
+**Configuration Hostinger** :
+- Repository : `sandyfrank/StopDiabete`
+- Build Command : `cd frontend && npm ci && npm run build`
+- Public Directory : `frontend/dist`
+- Auto-deploy : ✅ Activé sur push vers main
+
+**Autres guides** :
+- [DEPLOYMENT.md](./DEPLOYMENT.md) - Déploiement manuel FTP/SSH
+- [HOSTINGER_FTP_SETUP.md](./HOSTINGER_FTP_SETUP.md) - Configuration FTP/SSH avancée
+
+## ✅ État Actuel (2 février 2026)
 
 4. Configuration PM2### Frontend : **OPÉRATIONNEL** ✅
 
