@@ -1,6 +1,7 @@
 import express, { Application } from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import pool from './config/database'
 import authRoutes from './routes/authRoutes'
 import glucoseRoutes from './routes/glucoseRoutes'
 import riskRoutes from './routes/riskRoutes'
@@ -30,9 +31,35 @@ app.use('/api/auth', authRoutes)
 app.use('/api/glucose', glucoseRoutes)
 app.use('/api/risk', riskRoutes)
 
-// Health check
+// Health check endpoints
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', message: 'Server is running' })
+})
+
+// Health check with database connection test
+app.get('/api/health/full', async (_req, res) => {
+  try {
+    const dbCheck = await pool.query('SELECT NOW() as time')
+    res.json({
+      status: 'ok',
+      message: 'Server is running',
+      database: {
+        connected: true,
+        timestamp: dbCheck.rows[0].time
+      },
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development'
+    })
+  } catch (error) {
+    res.status(503).json({
+      status: 'error',
+      message: 'Database connection failed',
+      database: {
+        connected: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    })
+  }
 })
 
 // Error handler (should be last)

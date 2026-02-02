@@ -18,7 +18,16 @@ print_message() {
 # Fonction pour nettoyer les processus à l'arrêt
 cleanup() {
     print_message "\n🛑 Arrêt des serveurs..." "$YELLOW"
-    pkill -P $$
+    # Kill child PIDs we started (if set)
+    [ -n "$BACKEND_PID" ] && kill "$BACKEND_PID" 2>/dev/null || true
+    [ -n "$FRONTEND_PID" ] && kill "$FRONTEND_PID" 2>/dev/null || true
+    # As a safety net, free common ports
+    if lsof -ti:3000 > /dev/null 2>&1; then
+        kill -9 $(lsof -ti:3000) 2>/dev/null || true
+    fi
+    if lsof -ti:5000 > /dev/null 2>&1; then
+        kill -9 $(lsof -ti:5000) 2>/dev/null || true
+    fi
     exit 0
 }
 
@@ -46,6 +55,16 @@ fi
 
 # Créer un répertoire pour les logs
 mkdir -p logs
+
+# If previous servers are using ports, try to free them to avoid EADDRINUSE
+if lsof -ti:5000 > /dev/null 2>&1; then
+    print_message "⚠️  Port 5000 occupé - libération en cours..." "$YELLOW"
+    kill -9 $(lsof -ti:5000) 2>/dev/null || true
+fi
+if lsof -ti:3000 > /dev/null 2>&1; then
+    print_message "⚠️  Port 3000 occupé - libération en cours..." "$YELLOW"
+    kill -9 $(lsof -ti:3000) 2>/dev/null || true
+fi
 
 # Démarrer le backend
 print_message "🔧 Démarrage du serveur backend (port 5000)..." "$BLUE"
@@ -97,4 +116,14 @@ print_message "   - logs/frontend.log" "$YELLOW"
 print_message "\n💡 Appuyez sur Ctrl+C pour arrêter les serveurs\n" "$YELLOW"
 
 # Afficher les logs en temps réel
-tail -f logs/backend.log logs/frontend.log
+trap cleanup SIGINT SIGTERM
+# Follow both logs; when user presses Ctrl+C cleanup will run
+tail -f logs/backend.log -n +1 &
+TAIL_BACK_PID=$!
+tail -f logs/frontend.log -n +1 &
+TAIL_FRONT_PID=$!
+
+wait $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
+
+# Wait for tail processes (this will keep script running until SIGINT)
+wait $TAIL_BACK_PID $TAIL_FRONT_PID 2>/dev/null || true
