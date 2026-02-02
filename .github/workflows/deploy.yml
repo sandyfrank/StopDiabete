@@ -1,10 +1,12 @@
 name: Deploy to Hostinger
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch: # Allow manual deployment
+  # Disabled automatic deployment until secrets are configured
+  # Uncomment the lines below once you've configured GitHub secrets
+  # push:
+  #   branches:
+  #     - main
+  workflow_dispatch: # Manual deployment only
 
 jobs:
   deploy:
