@@ -16,7 +16,7 @@ const pgPool = new PgPool({
   password: process.env.DB_PASSWORD || 'stopdiabete2026',
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000,
 })
 
 // MySQL Pool
