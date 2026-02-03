@@ -13,7 +13,8 @@ interface GlucoseEntry {
   notes?: string
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+// Force localhost pour éviter les problèmes de CORS
+const API_URL = 'http://localhost:5000/api'
 
 const GlucoseTracker = () => {
   const { token } = useAuth()
