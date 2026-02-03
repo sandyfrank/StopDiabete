@@ -1,5 +1,5 @@
 import { Pool as PgPool } from 'pg'
-import mysql, { PoolConnection } from 'mysql2/promise'
+import mysql from 'mysql2/promise'
 import dotenv from 'dotenv'
 
 dotenv.config()

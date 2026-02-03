@@ -13,8 +13,20 @@ const Contact: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implémenter l'envoi du formulaire
-    console.log('Form submitted:', formData);
+    
+    // Créer un email avec les informations du formulaire
+    const subject = encodeURIComponent(`[StopDiabète] ${formData.subject || 'Contact'}`);
+    const body = encodeURIComponent(
+      `Nom: ${formData.name}\n` +
+      `Email: ${formData.email}\n` +
+      `Sujet: ${formData.subject}\n\n` +
+      `Message:\n${formData.message}`
+    );
+    
+    // Ouvrir le client email avec les informations pré-remplies
+    window.location.href = `mailto:sandy.ngaha@aims-cameroon.org?subject=${subject}&body=${body}`;
+    
+    // Afficher le message de confirmation
     setSubmitted(true);
     setTimeout(() => {
       setSubmitted(false);
@@ -158,8 +170,8 @@ const Contact: React.FC = () => {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900 mb-1">Email</p>
-                    <a href="mailto:support@stopdiabete.com" className="text-sm text-blue-600 hover:underline break-all">
-                      support@stopdiabete.com
+                    <a href="mailto:sandy.ngaha@aims-cameroon.org" className="text-sm text-blue-600 hover:underline break-all">
+                      sandy.ngaha@aims-cameroon.org
                     </a>
                   </div>
                 </div>
@@ -170,7 +182,7 @@ const Contact: React.FC = () => {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900 mb-1">Téléphone</p>
-                    <p className="text-sm text-gray-600">+33 1 23 45 67 89</p>
+                    <p className="text-sm text-gray-600">+33 768 01 47 69</p>
                     <p className="text-xs text-gray-500 mt-1">Lun-Ven: 9h-18h</p>
                   </div>
                 </div>
@@ -182,8 +194,7 @@ const Contact: React.FC = () => {
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900 mb-1">Adresse</p>
                     <p className="text-sm text-gray-600">
-                      123 Avenue de la Santé<br />
-                      75001 Paris, France
+                      France, Canada, Cameroun
                     </p>
                   </div>
                 </div>
