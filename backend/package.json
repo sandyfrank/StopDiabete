@@ -19,7 +19,9 @@
     "api"
   ],
   "dependencies": {
+    "@getbrevo/brevo": "^3.0.1",
     "@types/bcryptjs": "^2.4.6",
+    "@types/nodemailer": "^7.0.9",
     "@types/uuid": "^10.0.0",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.3",
@@ -32,6 +34,7 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.16.2",
+    "nodemailer": "^7.0.13",
     "pg": "^8.11.3",
     "uuid": "^13.0.0",
     "winston": "^3.11.0"
