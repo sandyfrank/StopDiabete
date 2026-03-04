@@ -35,10 +35,10 @@ const GlucoseTracker = () => {
 
   const [showForm, setShowForm] = useState(false)
 
-  // Charger les mesures au montage du composant
+  // Charger les mesures au montage du composant ET après chaque ajout
   useEffect(() => {
-    fetchEntries()
-  }, [])
+    if (token) fetchEntries()
+  }, [token, refreshTrigger])
 
   const fetchEntries = async () => {
     try {
@@ -73,7 +73,8 @@ const GlucoseTracker = () => {
         {
           value: parseFloat(formData.value),
           measurement_type: formData.measurement_type,
-          measured_at: formData.measured_at + ':00Z',
+          // datetime-local donne "2026-03-04T13:00" sans timezone → convertir en ISO UTC
+          measured_at: new Date(formData.measured_at).toISOString(),
           notes: formData.notes || undefined,
         },
         {
@@ -185,10 +186,10 @@ const GlucoseTracker = () => {
       )}
 
       {/* Coaching personnalisé - alertes et recommandations */}
-      <GlucoseRecommendations token={token!} refreshTrigger={refreshTrigger} />
+      {token && <GlucoseRecommendations token={token} refreshTrigger={refreshTrigger} />}
 
       {/* Tableau de bord - TIR, HbA1c, score d'observance */}
-      <GlucoseStats token={token!} refreshTrigger={refreshTrigger} />
+      {token && <GlucoseStats token={token} refreshTrigger={refreshTrigger} />}
 
       {/* Formulaire d'ajout */}
       {showForm && (
