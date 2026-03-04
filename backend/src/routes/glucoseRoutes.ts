@@ -121,8 +121,10 @@ router.get('/stats', async (req: Request, res: Response) => {
     const timeBelowRange = Math.round((belowRange / values.length) * 100)
     const timeAboveRange = Math.round((aboveRange / values.length) * 100)
 
-    // Formule ADAG : eA1C = (average + 46.7) / 28.7
-    const estimatedHbA1c = Math.round(((average + 46.7) / 28.7) * 10) / 10
+    // Formule ADAG (ADA 2008) : eA1C (%) = (moyenne_mmol/L + 2.59) / 1.59
+    // Conversion mg/dL → mmol/L : diviser par 18.0182
+    const averageMmol = average / 18.0182
+    const estimatedHbA1c = Math.round(((averageMmol + 2.59) / 1.59) * 10) / 10
 
     const uniqueDays = new Set(
       readings.map((r: any) => new Date(r.measured_at).toDateString())
