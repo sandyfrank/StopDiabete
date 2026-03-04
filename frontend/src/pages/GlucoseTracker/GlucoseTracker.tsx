@@ -3,6 +3,8 @@ import { useAuth } from '../../context/AuthContext'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Input from '../../components/common/Input'
+import GlucoseStats from '../../components/glucose/GlucoseStats'
+import GlucoseRecommendations from '../../components/glucose/GlucoseRecommendations'
 import axios from 'axios'
 
 interface GlucoseEntry {
@@ -22,6 +24,7 @@ const GlucoseTracker = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   const [formData, setFormData] = useState({
     value: '',
@@ -93,6 +96,8 @@ const GlucoseTracker = () => {
           notes: '',
         })
         setShowForm(false)
+        // Déclencher le rafraîchissement des stats et recommandations
+        setRefreshTrigger(prev => prev + 1)
       }
     } catch (err: any) {
       console.error('Error creating glucose entry:', err)
@@ -178,6 +183,12 @@ const GlucoseTracker = () => {
           <p className="text-red-800 text-sm">{error}</p>
         </div>
       )}
+
+      {/* Coaching personnalisé - alertes et recommandations */}
+      <GlucoseRecommendations token={token!} refreshTrigger={refreshTrigger} />
+
+      {/* Tableau de bord - TIR, HbA1c, score d'observance */}
+      <GlucoseStats token={token!} refreshTrigger={refreshTrigger} />
 
       {/* Formulaire d'ajout */}
       {showForm && (
