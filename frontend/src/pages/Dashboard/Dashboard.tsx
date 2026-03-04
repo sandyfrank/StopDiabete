@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { Link } from 'react-router-dom'
+import axios from 'axios'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -27,6 +28,8 @@ ChartJS.register(
   Filler
 )
 
+const API_URL = 'http://localhost:5000/api'
+
 interface GlucoseReading {
   id: string
   value: number
@@ -39,65 +42,91 @@ interface Stats {
   lastReading: number
   totalReadings: number
   trend: 'up' | 'down' | 'stable'
+  timeInRange: number | null
+  estimatedHbA1c: number | null
 }
 
 const Dashboard = () => {
-  const { user } = useAuth()
+  const { user, token } = useAuth()
   const [readings, setReadings] = useState<GlucoseReading[]>([])
   const [stats, setStats] = useState<Stats>({
     avgGlucose: 0,
     lastReading: 0,
     totalReadings: 0,
-    trend: 'stable'
+    trend: 'stable',
+    timeInRange: null,
+    estimatedHbA1c: null,
   })
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // TODO: Remplacer par un vrai appel API
-    // Données de démonstration
-    const demoReadings: GlucoseReading[] = [
-      { id: '1', value: 95, measured_at: '2026-01-27T08:00:00Z', measurement_type: 'fasting' },
-      { id: '2', value: 120, measured_at: '2026-01-28T12:00:00Z', measurement_type: 'after_meal' },
-      { id: '3', value: 88, measured_at: '2026-01-29T08:00:00Z', measurement_type: 'fasting' },
-      { id: '4', value: 115, measured_at: '2026-01-30T12:00:00Z', measurement_type: 'after_meal' },
-      { id: '5', value: 92, measured_at: '2026-01-31T08:00:00Z', measurement_type: 'fasting' },
-      { id: '6', value: 110, measured_at: '2026-02-01T12:00:00Z', measurement_type: 'after_meal' },
-      { id: '7', value: 90, measured_at: '2026-02-02T08:00:00Z', measurement_type: 'fasting' },
-    ]
+    if (!token) return
+    fetchDashboardData()
+  }, [token])
 
-    setReadings(demoReadings)
-    
-    // Calculer les statistiques
-    const avg = demoReadings.reduce((sum, r) => sum + r.value, 0) / demoReadings.length
-    const last = demoReadings[demoReadings.length - 1]?.value || 0
-    const secondLast = demoReadings[demoReadings.length - 2]?.value || 0
-    const trend = last > secondLast + 5 ? 'up' : last < secondLast - 5 ? 'down' : 'stable'
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoading(true)
 
-    setStats({
-      avgGlucose: Math.round(avg),
-      lastReading: last,
-      totalReadings: demoReadings.length,
-      trend
-    })
-    setIsLoading(false)
-  }, [])
+      // Appel parallèle : liste des mesures (7 derniers jours) + stats avancées
+      const [readingsRes, statsRes] = await Promise.all([
+        axios.get(`${API_URL}/glucose`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get(`${API_URL}/glucose/stats?days=7`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+      ])
+
+      // Mesures pour le graphique : les 7 dernières seulement
+      const allReadings: GlucoseReading[] = readingsRes.data.data || []
+      const last7 = allReadings.slice(0, 14).reverse() // max 14 points, ordre chronologique
+      setReadings(last7)
+
+      // Stats depuis l'endpoint dédié
+      const s = statsRes.data.data
+      const lastVal = allReadings[0]?.value ?? 0
+      const secondVal = allReadings[1]?.value ?? 0
+      const trend: 'up' | 'down' | 'stable' =
+        Number(lastVal) > Number(secondVal) + 5 ? 'up' :
+        Number(lastVal) < Number(secondVal) - 5 ? 'down' : 'stable'
+
+      setStats({
+        avgGlucose: s.average ?? 0,
+        lastReading: Number(lastVal),
+        totalReadings: allReadings.length,
+        trend,
+        timeInRange: s.timeInRange,
+        estimatedHbA1c: s.estimatedHbA1c,
+      })
+    } catch (err) {
+      console.error('Erreur chargement dashboard:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const chartData = {
     labels: readings.map(r => {
       const date = new Date(r.measured_at)
-      return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+      return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
     }),
     datasets: [
       {
         label: 'Glycémie (mg/dL)',
-        data: readings.map(r => r.value),
+        data: readings.map(r => Number(r.value)),
         borderColor: 'rgb(14, 165, 233)',
         backgroundColor: 'rgba(14, 165, 233, 0.1)',
         fill: true,
         tension: 0.4,
         pointRadius: 6,
         pointHoverRadius: 8,
-        pointBackgroundColor: 'rgb(14, 165, 233)',
+        pointBackgroundColor: readings.map(r => {
+          const v = Number(r.value)
+          if (v < 70) return 'rgb(239, 68, 68)'
+          if (v > 180) return 'rgb(245, 158, 11)'
+          return 'rgb(14, 165, 233)'
+        }),
         pointBorderColor: '#fff',
         pointBorderWidth: 2,
       },
@@ -108,39 +137,32 @@ const Dashboard = () => {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        display: false,
-      },
+      legend: { display: false },
       tooltip: {
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         padding: 12,
-        titleFont: {
-          size: 14,
-        },
-        bodyFont: {
-          size: 13,
-        },
+        titleFont: { size: 14 },
+        bodyFont: { size: 13 },
+        callbacks: {
+          label: (ctx: any) => {
+            const v = ctx.raw
+            const status = v < 70 ? '🔴 Bas' : v > 180 ? '🟡 Élevé' : '🟢 Normal'
+            return ` ${v} mg/dL — ${status}`
+          }
+        }
       },
     },
     scales: {
       y: {
         beginAtZero: false,
-        min: 60,
-        max: 140,
-        grid: {
-          color: 'rgba(0, 0, 0, 0.05)',
-        },
+        min: readings.length > 0 ? Math.max(40, Math.min(...readings.map(r => Number(r.value))) - 20) : 60,
+        max: readings.length > 0 ? Math.min(400, Math.max(...readings.map(r => Number(r.value))) + 30) : 200,
+        grid: { color: 'rgba(0, 0, 0, 0.05)' },
         ticks: {
-          callback: function(value: string | number) {
-            return `${value} mg/dL`
-          },
+          callback: function(value: string | number) { return `${value} mg/dL` },
         },
       },
-      x: {
-        grid: {
-          display: false,
-        },
-      },
+      x: { grid: { display: false } },
     },
   } as any
 
@@ -187,54 +209,75 @@ const Dashboard = () => {
       </div>
 
       {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card className="glassmorphism">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Dernière mesure</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.lastReading}</p>
-              <p className="text-sm text-gray-500 mt-1">mg/dL</p>
-            </div>
-            <div className={`px-3 py-1 rounded-full ${lastReadingStatus.bg}`}>
-              <span className={`text-sm font-medium ${lastReadingStatus.color}`}>
-                {lastReadingStatus.text}
-              </span>
-            </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        <Card className="glassmorphism col-span-1">
+          <p className="text-xs text-gray-600 mb-1">Dernière mesure</p>
+          <p className="text-2xl font-bold text-gray-900">{stats.lastReading || '—'}</p>
+          <p className="text-xs text-gray-500">mg/dL</p>
+          {stats.lastReading > 0 && (
+            <span className={`text-xs font-medium mt-1 inline-block ${lastReadingStatus.color}`}>
+              {lastReadingStatus.text}
+            </span>
+          )}
+        </Card>
+
+        <Card className="glassmorphism col-span-1">
+          <p className="text-xs text-gray-600 mb-1">Moyenne 7j</p>
+          <p className="text-2xl font-bold text-gray-900">{stats.avgGlucose || '—'}</p>
+          <p className="text-xs text-gray-500">mg/dL</p>
+          <span className={`text-xs font-medium mt-1 inline-block ${getTrendColor()}`}>
+            {getTrendIcon()} {stats.trend === 'up' ? 'Hausse' : stats.trend === 'down' ? 'Baisse' : 'Stable'}
+          </span>
+        </Card>
+
+        <Card className="glassmorphism col-span-1">
+          <p className="text-xs text-gray-600 mb-1">Temps dans cible</p>
+          <p className={`text-2xl font-bold ${
+            stats.timeInRange === null ? 'text-gray-400' :
+            stats.timeInRange >= 70 ? 'text-success-600' :
+            stats.timeInRange >= 50 ? 'text-warning-600' : 'text-danger-600'
+          }`}>
+            {stats.timeInRange !== null ? `${stats.timeInRange}%` : '—'}
+          </p>
+          <p className="text-xs text-gray-500">70–180 mg/dL</p>
+          <div className="mt-1 h-1 bg-gray-200 rounded-full overflow-hidden">
+            <div className={`h-full rounded-full ${
+              (stats.timeInRange ?? 0) >= 70 ? 'bg-success-500' :
+              (stats.timeInRange ?? 0) >= 50 ? 'bg-warning-500' : 'bg-danger-500'
+            }`} style={{ width: `${stats.timeInRange ?? 0}%` }} />
           </div>
         </Card>
 
-        <Card className="glassmorphism">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Moyenne 7 jours</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.avgGlucose}</p>
-              <p className="text-sm text-gray-500 mt-1">mg/dL</p>
-            </div>
-            <div className="text-4xl">{getTrendIcon()}</div>
-          </div>
+        <Card className="glassmorphism col-span-1">
+          <p className="text-xs text-gray-600 mb-1">HbA1c estimé</p>
+          <p className={`text-2xl font-bold ${
+            stats.estimatedHbA1c === null ? 'text-gray-400' :
+            stats.estimatedHbA1c < 5.7 ? 'text-success-600' :
+            stats.estimatedHbA1c < 6.5 ? 'text-warning-600' : 'text-danger-600'
+          }`}>
+            {stats.estimatedHbA1c !== null ? `${stats.estimatedHbA1c}%` : '—'}
+          </p>
+          <p className="text-xs text-gray-500">
+            {stats.estimatedHbA1c === null ? 'Pas de données' :
+             stats.estimatedHbA1c < 5.7 ? 'Normal' :
+             stats.estimatedHbA1c < 6.5 ? 'Pré-diabète' : 'Diabète'}
+          </p>
         </Card>
 
-        <Card className="glassmorphism">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Tendance</p>
-              <p className={`text-2xl font-bold ${getTrendColor()}`}>
-                {stats.trend === 'up' ? 'En hausse' : stats.trend === 'down' ? 'En baisse' : 'Stable'}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">derniers jours</p>
-            </div>
-          </div>
+        <Card className="glassmorphism col-span-1">
+          <p className="text-xs text-gray-600 mb-1">Total mesures</p>
+          <p className="text-2xl font-bold text-gray-900">{stats.totalReadings}</p>
+          <p className="text-xs text-gray-500">enregistrements</p>
+          <span className="text-lg mt-1 block">📊</span>
         </Card>
 
-        <Card className="glassmorphism">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Mesures totales</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.totalReadings}</p>
-              <p className="text-sm text-gray-500 mt-1">enregistrements</p>
-            </div>
-            <div className="text-4xl">📊</div>
-          </div>
+        <Card className="glassmorphism col-span-1 flex flex-col justify-between">
+          <p className="text-xs text-gray-600 mb-2">Nouvelle mesure</p>
+          <Link to="/glucose">
+            <Button variant="primary" size="sm" className="w-full text-xs">
+              + Ajouter
+            </Button>
+          </Link>
         </Card>
       </div>
 
@@ -243,7 +286,9 @@ const Dashboard = () => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Évolution de la glycémie</h2>
-            <p className="text-sm text-gray-600 mt-1">Derniers 7 jours</p>
+            <p className="text-sm text-gray-600 mt-1">
+              {readings.length > 0 ? `${readings.length} dernières mesures` : 'Aucune mesure'}
+            </p>
           </div>
           <Link to="/glucose">
             <Button variant="primary" size="sm">
