@@ -172,8 +172,9 @@ export const getProfile = async (
     }
 
     const result = await pool.query(
-      `SELECT id, email, first_name, last_name, date_of_birth, 
-              has_family_history, diabetes_type, created_at 
+      `SELECT id, email, first_name, last_name, date_of_birth,
+              gender, phone, diabetes_type, diagnosis_date,
+              has_family_history, created_at
        FROM users WHERE id = $1`,
       [req.user.id]
     )
@@ -192,9 +193,69 @@ export const getProfile = async (
         firstName: user.first_name,
         lastName: user.last_name,
         dateOfBirth: user.date_of_birth,
-        hasFamilyHistory: user.has_family_history,
+        gender: user.gender,
+        phone: user.phone,
         diabetesType: user.diabetes_type,
+        diagnosisDate: user.diagnosis_date,
+        hasFamilyHistory: user.has_family_history,
         createdAt: user.created_at
+      }
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const updateProfile = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user) throw new ApiError(401, 'Non authentifié')
+
+    const {
+      firstName, lastName, dateOfBirth, gender, phone,
+      diabetesType, diagnosisDate, hasFamilyHistory
+    } = req.body
+
+    const result = await pool.query(
+      `UPDATE users SET
+        first_name      = COALESCE($1, first_name),
+        last_name       = COALESCE($2, last_name),
+        date_of_birth   = COALESCE($3, date_of_birth),
+        gender          = COALESCE($4, gender),
+        phone           = COALESCE($5, phone),
+        diabetes_type   = COALESCE($6, diabetes_type),
+        diagnosis_date  = COALESCE($7, diagnosis_date),
+        has_family_history = COALESCE($8, has_family_history),
+        updated_at      = NOW()
+       WHERE id = $9
+       RETURNING id, email, first_name, last_name, date_of_birth,
+                 gender, phone, diabetes_type, diagnosis_date,
+                 has_family_history, created_at`,
+      [
+        firstName || null, lastName || null,
+        dateOfBirth || null, gender || null,
+        phone || null, diabetesType || null,
+        diagnosisDate || null,
+        hasFamilyHistory !== undefined ? hasFamilyHistory : null,
+        req.user.id
+      ]
+    )
+
+    const u = result.rows[0]
+    res.json({
+      success: true,
+      message: 'Profil mis à jour',
+      user: {
+        id: u.id, email: u.email,
+        firstName: u.first_name, lastName: u.last_name,
+        dateOfBirth: u.date_of_birth, gender: u.gender,
+        phone: u.phone, diabetesType: u.diabetes_type,
+        diagnosisDate: u.diagnosis_date,
+        hasFamilyHistory: u.has_family_history,
+        createdAt: u.created_at,
       }
     })
   } catch (error) {
